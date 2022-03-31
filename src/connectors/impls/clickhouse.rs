@@ -14,6 +14,8 @@
 
 use crate::connectors::prelude::*;
 
+use clickhouse_rs::{Pool, Block};
+
 #[derive(Default, Debug)]
 pub(crate) struct Builder {}
 
@@ -41,7 +43,8 @@ impl Connector for Clickhouse {
         sink_context: SinkContext,
         builder: SinkManagerBuilder,
     ) -> Result<Option<SinkAddr>> {
-        let sink = ClickhouseSink;
+        let db_url = "tcp://user:password@host:9000/clicks?compression=lz4".to_string();
+        let sink = ClickhouseSink { db_url, pool: None };
         builder.spawn(sink, sink_context).map(Some)
     }
 
@@ -50,22 +53,69 @@ impl Connector for Clickhouse {
     }
 }
 
-pub(crate) struct ClickhouseSink;
+// Assumptions for now:
+//   - db_url is fetched in the `create_sink` method,
+//   - the pool is created in the `connect` method,
+//   - the actual client is created in on-event
+pub(crate) struct ClickhouseSink {
+    db_url: String,
+    pool: Option<Pool>,
+}
 
 #[async_trait::async_trait]
 impl Sink for ClickhouseSink {
+    async fn connect(&mut self, _ctx: &SinkContext, _attempt: &Attempt) -> Result<bool> {
+        let pool = Pool::new(self.db_url.as_str());
+        self.pool = Some(pool);
+        Ok(true)
+    }
+
     async fn on_event(
         &mut self,
         _input: &str,
-        _event: Event,
+        event: Event,
         _ctx: &SinkContext,
         _serializer: &mut EventSerializer,
         _start: u64,
     ) -> Result<SinkReply> {
-        Ok(SinkReply::NONE)
+        // TODO: is this the correct ErrorKind variant?
+        let mut client = self
+            .pool
+            .as_ref()
+            .ok_or_else(|| Error::from(ErrorKind::NoSocket))?
+            .get_handle()
+            .await?;
+
+        // TODO: fetch column data from the context?
+        let columns = get_column_data();
+
+        let block = columns.into_iter().fold(Block::new(), |block, (name, ty)| match ty {
+            ClickHouseType::UInt8 => add_uint8_column(block, name, &event),
+        });
+
+        client.insert("i_dont_know", block).await?;
+
+        Ok(SinkReply::ACK)
     }
 
     fn auto_ack(&self) -> bool {
         true
     }
+}
+
+fn get_column_data() -> Vec<(String, ClickHouseType)> {
+    vec![("age".to_string(), ClickHouseType::UInt8)]
+}
+
+enum ClickHouseType {
+    UInt8,
+}
+
+fn add_uint8_column(block: Block, name: String, event: &Event) -> Block {
+    // TODO: better name
+    let values = event.value_iter()
+        .map(|row| row.as_object().unwrap().get(name.as_str()).unwrap().as_u8().unwrap())
+        .collect::<Vec<_>>();
+
+    block.add_column(name.as_str(), values)
 }
