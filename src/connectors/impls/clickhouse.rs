@@ -65,8 +65,10 @@ pub(crate) struct ClickhouseSink {
 #[async_trait::async_trait]
 impl Sink for ClickhouseSink {
     async fn connect(&mut self, _ctx: &SinkContext, _attempt: &Attempt) -> Result<bool> {
+        /*
         let pool = Pool::new(self.db_url.as_str());
         self.pool = Some(pool);
+        */
         Ok(true)
     }
 
@@ -78,6 +80,7 @@ impl Sink for ClickhouseSink {
         _serializer: &mut EventSerializer,
         _start: u64,
     ) -> Result<SinkReply> {
+        /*
         // TODO: is this the correct ErrorKind variant?
         let mut client = self
             .pool
@@ -95,6 +98,8 @@ impl Sink for ClickhouseSink {
 
         client.insert("i_dont_know", block).await?;
 
+        */
+
         Ok(SinkReply::ACK)
     }
 
@@ -103,6 +108,7 @@ impl Sink for ClickhouseSink {
     }
 }
 
+/*
 fn get_column_data() -> Vec<(String, ClickHouseType)> {
     vec![("age".to_string(), ClickHouseType::UInt8)]
 }
@@ -119,3 +125,4 @@ fn add_uint8_column(block: Block, name: String, event: &Event) -> Block {
 
     block.add_column(name.as_str(), values)
 }
+*/
