@@ -14,7 +14,7 @@
 
 use crate::connectors::prelude::*;
 
-use clickhouse_rs::{Pool, Block};
+use clickhouse_rs::{Pool, /* Block */};
 
 #[derive(Default, Debug)]
 pub(crate) struct Builder {}
@@ -44,7 +44,7 @@ impl Connector for Clickhouse {
         builder: SinkManagerBuilder,
     ) -> Result<Option<SinkAddr>> {
         let db_url = "tcp://user:password@host:9000/clicks?compression=lz4".to_string();
-        let sink = ClickhouseSink { db_url, pool: None };
+        let sink = ClickhouseSink { /* db_url, pool: None */ };
         builder.spawn(sink, sink_context).map(Some)
     }
 
@@ -58,8 +58,10 @@ impl Connector for Clickhouse {
 //   - the pool is created in the `connect` method,
 //   - the actual client is created in on-event
 pub(crate) struct ClickhouseSink {
+    /*
     db_url: String,
     pool: Option<Pool>,
+    */
 }
 
 #[async_trait::async_trait]
@@ -75,7 +77,7 @@ impl Sink for ClickhouseSink {
     async fn on_event(
         &mut self,
         _input: &str,
-        event: Event,
+        _event: Event,
         _ctx: &SinkContext,
         _serializer: &mut EventSerializer,
         _start: u64,
