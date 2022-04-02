@@ -38,7 +38,7 @@ flow
     create pipeline main from pipelines::passthrough;
 
     create connector console from connectors::console;
-    create connector clickhouse from clickhouse;
+    create connector clickhouse;
 
     connect /connector/console/out to /pipeline/main/in;
     connect /pipeline/main to /connector/clickhouse/in;
