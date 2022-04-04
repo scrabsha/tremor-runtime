@@ -3,6 +3,11 @@ flow
     use troy::connectors;
     use troy::pipelines;
 
+    define connector stdin from stdio
+    with
+        codec = "json"
+    end;
+
 
     # sink only connector
     define connector clickhouse from clickhouse
@@ -37,10 +42,10 @@ flow
 
     create pipeline main from pipelines::passthrough;
 
-    create connector console from connectors::console;
+    create connector stdin;
     create connector clickhouse;
 
-    connect /connector/console/out to /pipeline/main/in;
+    connect /connector/stdin/out to /pipeline/main/in;
     connect /pipeline/main to /connector/clickhouse/in;
     
 
